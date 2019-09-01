@@ -1,0 +1,37 @@
+#!/bin/bash
+
+echo "10.0.0.100  kbserver.example.com" >> /etc/hosts;
+echo "10.0.0.101  kbclient.example.com" >> /etc/hosts;
+
+
+yum install -y krb5-server krb5-workstation pam_krb5 firewalld;
+
+
+cat kdconf > /var/kerberos/krb5kdc/kdc.conf;
+
+
+cat etckrbconf > /etc/krb5.conf;
+
+kdb5_util create -s -r EXAMPLE.COM -P "pwsswd";
+
+systemctl start krb5kdc kadmin;
+
+systemctl enable krb5kdc kadmin;
+
+useradd user01;
+
+kadmin.local addprinc -pw "passswd" root/admin;
+kadmin.local addprinc -pw "passwd" user01;
+kadmin.local addprinc -randkey host/kbserver.example.com;
+kadmin.local ktadd host/kbserver.example.com;
+
+authconfig --enablekrb5 --update;
+
+systemctl enable firewalld;
+systemctl start firewalld;
+
+cat krbxml > /etc/firewalld/services/kerberos.xml;
+
+firewall-cmd --permanent --add-service=kerberos;
+
+firewall-cmd --reload;
